@@ -22,3 +22,7 @@ cp -v ./unicguard.py /usr/lib/python3.8/unicguard.py
 if [ $? -eq 0 ]; then
     echo Copyed unicguard to python3.8
 fi
+cp -v ./unicguard.py /usr/lib/python3.9/unicguard.py
+if [ $? -eq 0 ]; then
+    echo Copyed unicguard to python3.9
+fi
