@@ -1,5 +1,5 @@
 echo Downloading, Unziping and Installing UniCurses
-wget http://netix.dl.sourceforge.net/project/pyunicurses/unicurses-1.2/UniCurses-1.2.zip
+w3m http://netix.dl.sourceforge.net/project/pyunicurses/unicurses-1.2/UniCurses-1.2.zip
 if [ $? -eq 0 ]; then
     echo Downloaded UniCurses-1.2.zip
 fi
