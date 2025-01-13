@@ -1,52 +1,89 @@
-﻿import unicurses as uc
+﻿"""UnicGuard is a small utility library for unicurses applications. It provides a context manager for unicurses applications and a text style class.
+"""
 
 
-#KEY_ESC = 27
-#KEY_ESCAPE = KEY_ESC
+import unicurses as uc
 
 
-_global_color_number = 1;
 _global_styles = {}
 
 
-def color_unified_256(font_color, back_color):
+def color_unified_256(font_color:int, back_color:int):
+  """ Defines a fixed color pair for the given font- and background colors.
+  Initializes the color pair if it does not exist yet.
+
+  Args:
+      font_color (int): 256 Color code for the font color (0-255)
+      back_color (int): 256 Color code for the background color (0-255)
+
+  Returns:
+      int: The color pair id
+  """
+
   global _global_styles
 
-  if (font_color, back_color) in global_styles:
-    return global_styles[(font_color, back_color)]
+  id = font_color << 8 | back_color
+  if id in _global_styles:
+    return id
 
-  style = global_color_number
-  uc.init_pair(style, font_color, back_color)
-  global_styles[(font_color, back_color)] = style
-
-  global_color_number += 1
-  return style
+  uc.addstr(f"Initializing color pair {id} with font color {font_color} and background color {back_color}\n")
+  uc.init_pair(id, font_color, back_color)
+  _global_styles[id] = True
+  return id
 
 
-class Color:
+class TextStyle:
+  """Defines a text style for a ncurses application, containing the font color, background color and additional attributes.
+  """
 
-  id:int
-  key:str
+  _id:int
   fg:int
   bg:int
   additional_attributes:list[int]
 
   def __init__(self, fg:int, bg:int=uc.COLOR_BLACK, *additional_attributes:int):
-    global _global_color_number, _global_styles
+    """Initializes a new TextStyle object.
+
+    Args:
+        fg (int): 256 Color code for the font color (0-255)
+        bg (int, optional): 256 Color code for the background color (0-255). Defaults to uc.COLOR_BLACK.
+        *additional_attributes (int): Additional attributes for the text style. Can be any of the unicurses attributes.
+    """
     self.fg = fg
     self.bg = bg
     self.additional_attributes = additional_attributes
-    self.key = f"f{fg};b{bg};a{','.join(map(str, additional_attributes))}"
-    self.id = _global_color_number
-    _global_color_number += 1
-    uc.init_pair(self.id, fg, bg)
-    _global_styles[self.key] = self.id
+    self._id = color_unified_256(fg, bg)
+
+  def on(self, screen):
+    """Turns on the text style for the given window.
+    """
+    screen.attron(uc.color_pair(self._id))
+    for attr in self.additional_attributes:
+      screen.attron(attr)
+
+  def off(self, screen):
+    """Turns off the text style for the given window.
+    """
+    screen.attroff(uc.color_pair(self._id))
+    for attr in self.additional_attributes:
+      screen.attroff(attr)
 
 
 class UnicursesGuard:
+  """A context manager for unicurses applications. Initializes the screen and handles exceptions.
+
+  Use with a 'with' statement to ensure the screen is properly initialized and closed.
+
+  Optons:
+    start_color (bool): Starts color mode to allow for custom colors. Defaults to True.
+    noecho (bool): Turns off echoing of keys. Defaults to True.
+    hide_cursor (bool): Hides the cursor. Defaults to True.
+    keypad (bool): Allows for special keys to be read. Defaults to True.
+    show_exceptions (bool): If True, exceptions will be printed to the console. Defaults to False.
+  """
 
   show_exceptions:bool = False
-  screen:uc.WINDOW = None
+  screen = None
 
   def __enter__(self, start_color:bool=True, noecho:bool=True, hide_cursor:bool=True, keypad:bool=True, show_exceptions:bool=False):
     self.show_exceptions = show_exceptions
@@ -66,3 +103,23 @@ class UnicursesGuard:
         print(traceback)
       return False
     return True
+
+
+def main():
+  """Main function for testing the library.
+  """
+  with UnicursesGuard() as stdscr:
+    uc.init_pair(256, uc.COLOR_WHITE, uc.COLOR_BLUE)
+    #style = TextStyle(uc.COLOR_WHITE, uc.COLOR_BLUE, uc.A_BOLD)
+    #style.on(stdscr)
+    uc.attron(uc.color_pair(256))
+    stdscr.addstr("Hello, World!")
+    uc.attroff(uc.color_pair(256))
+    #style.off(stdscr)
+    stdscr.addstr("\n\nPress any key to exit...\n\n")
+    stdscr.refresh()
+    uc.getch()
+
+
+if __name__ == "__main__":
+  main()
