@@ -38,13 +38,14 @@ with UnicursesGuard() as stdscr:
 The `TextStyle` class defines a text style for a ncurses application, containing the font color, background color and additional attributes.
 
 ```python
-from unicguard import TextStyle
+from unicguard import UnicursesGuard, TextStyle
 
-style = TextStyle(uc.COLOR_WHITE, uc.COLOR_BLUE, uc.A_BOLD)
+with UnicursesGuard() as stdscr:
+  style = TextStyle(uc.COLOR_WHITE, uc.COLOR_BLUE, uc.A_BOLD)
 
-style.on(stdscr)
-stdscr.addstr("Hello, World!")
-style.off(stdscr)
+  style.on(stdscr)
+  stdscr.addstr("Hello, World!")
+  style.off(stdscr)
 ```
 
 ## Unicurses
