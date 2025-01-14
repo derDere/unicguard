@@ -5,7 +5,11 @@
 import unicurses as uc
 
 
+MAX_COLOR_PAIR_COUNT = 256
+
+
 _global_styles = {}
+_global_color_id_counter = 255
 
 
 def color_unified_256(font_color:int, back_color:int):
@@ -20,16 +24,20 @@ def color_unified_256(font_color:int, back_color:int):
       int: The color pair id
   """
 
-  global _global_styles
+  global _global_styles, _global_color_id_counter
 
-  id = font_color << 8 | back_color
+  id = "f%03i;b%03i" % (font_color, back_color)
   if id in _global_styles:
-    return id
+    return _global_styles[id]
 
-  uc.addstr(f"Initializing color pair {id} with font color {font_color} and background color {back_color}\n")
-  uc.init_pair(id, font_color, back_color)
-  _global_styles[id] = True
-  return id
+  pair_number = _global_color_id_counter
+  if pair_number >= MAX_COLOR_PAIR_COUNT:
+    raise Exception("Maximum number of color pairs reached.")
+  _global_color_id_counter += 1
+
+  uc.init_pair(pair_number, font_color, back_color)
+  _global_styles[id] = pair_number
+  return pair_number
 
 
 class TextStyle:
@@ -82,25 +90,39 @@ class UnicursesGuard:
     show_exceptions (bool): If True, exceptions will be printed to the console. Defaults to False.
   """
 
+  start_color:bool = True
+  noecho:bool = True
+  hide_cursor:bool = True
+  keypad:bool = True
   show_exceptions:bool = False
   screen = None
 
-  def __enter__(self, start_color:bool=True, noecho:bool=True, hide_cursor:bool=True, keypad:bool=True, show_exceptions:bool=False):
+  def __init__(self, start_color:bool=True, noecho:bool=True, hide_cursor:bool=True, keypad:bool=True, show_exceptions:bool=False):
+    self.start_color = start_color
+    self.noecho = noecho
+    self.hide_cursor = hide_cursor
+    self.keypad = keypad
     self.show_exceptions = show_exceptions
+
+  def __enter__(self):
     self.screen = uc.initscr() # Initialize the screen
-    if start_color: uc.start_color() # Starts color mode to allow for custom colors
-    if noecho: uc.noecho() # Turns off echoing of keys
-    if hide_cursor: uc.curs_set(False) # Hides the cursor
-    if keypad: uc.keypad(self.screen, True) # Allows for special keys to be read
+    if self.start_color: uc.start_color() # Starts color mode to allow for custom colors
+    if self.noecho: uc.noecho() # Turns off echoing of keys
+    if self.hide_cursor: uc.curs_set(False) # Hides the cursor
+    if self.keypad: uc.keypad(self.screen, True) # Allows for special keys to be read
     return self.screen
 
   def __exit__(self, type, value, traceback):
     uc.endwin()
     if type is not None:
       if self.show_exceptions:
-        print(type)
-        print(value)
-        print(traceback)
+        print("UnicursesGuard got exited because of an exception:\n")
+        print(type.__name__)
+        print("")
+        print(" - " + value)
+        print("")
+        print(traceback.format_exc())
+        print("")
       return False
     return True
 
@@ -109,13 +131,10 @@ def main():
   """Main function for testing the library.
   """
   with UnicursesGuard() as stdscr:
-    uc.init_pair(256, uc.COLOR_WHITE, uc.COLOR_BLUE)
-    #style = TextStyle(uc.COLOR_WHITE, uc.COLOR_BLUE, uc.A_BOLD)
-    #style.on(stdscr)
-    uc.attron(uc.color_pair(256))
+    style = TextStyle(uc.COLOR_WHITE, uc.COLOR_BLUE, uc.A_BOLD)
+    style.on(stdscr)
     stdscr.addstr("Hello, World!")
-    uc.attroff(uc.color_pair(256))
-    #style.off(stdscr)
+    style.off(stdscr)
     stdscr.addstr("\n\nPress any key to exit...\n\n")
     stdscr.refresh()
     uc.getch()
