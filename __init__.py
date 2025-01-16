@@ -9,7 +9,7 @@ MAX_COLOR_PAIR_COUNT = 256
 
 
 _global_styles = {}
-_global_color_id_counter = 255
+_global_color_id_counter = 0
 
 
 def color_unified_256(font_color:int, back_color:int):
